@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      function owner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+      function validProfile() {
+        let d = request.resource.data;
+        return d.keys().hasAll(['name', 'about', 'openToExchanges', 'teaching', 'learning'])
+          && d.keys().hasOnly(['name', 'about', 'openToExchanges', 'teaching', 'learning'])
+          && d.name is string && d.name.size() >= 2 && d.name.size() <= 60
+          && d.about is string && d.about.size() <= 500
+          && d.openToExchanges is bool
+          && d.teaching is list && d.teaching.size() <= 50
+          && d.learning is list && d.learning.size() <= 50;
+      }
+      allow get: if owner();
+      allow create, update: if owner() && validProfile();
+      allow list, delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
